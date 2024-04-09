@@ -1,20 +1,15 @@
 package handlers
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
+func HomeServer(w http.ResponseWriter, r *http.Request) {
 
-func ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	w.Header().Set("Content-Type", "text/json")
-	jsonPuro := `{"Mensagem": "Limite não excedido"}`
-	err := json.NewEncoder(w).Encode(jsonPuro)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
+
+	fmt.Fprintf(w, "Ainda não aingiu o limite de requisições.")
 
 }
