@@ -12,10 +12,10 @@ import (
 )
 
 type RateLimit struct {
-	DB                *redis.Client
+	DB                     *redis.Client
 	LimiteRequisicoesToken int
-	LimiteRequisicoesIP int
-	Tempo             time.Duration
+	LimiteRequisicoesIP    int
+	Tempo                  time.Duration
 }
 
 func RateLimiRequesttMiddleware(rateLimit RateLimit) mux.MiddlewareFunc {
@@ -26,29 +26,52 @@ func RateLimiRequesttMiddleware(rateLimit RateLimit) mux.MiddlewareFunc {
 			redisCliente := redis.ConnectRedis()
 			defer redisCliente.CloseRedis()
 
-			ip := r.RemoteAddr
-			ipSemPorta, _, _ := net.SplitHostPort(ip)
-
-			//rateLimit := RateLimit{LimiteRequisicoes: 10, Tempo: time.Second * 30}
-
-			counter, err := redisCliente.ContarRequisicoes(ipSemPorta, rateLimit.Tempo)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				log.Println(err)
-			} else {
-				if counter >= int64(rateLimit.LimiteRequisicoesIP) {
-					w.WriteHeader(http.StatusTooManyRequests)
-					w.Write([]byte("Limite de requisições excedido"))
-					return
+			token := r.Header.Get("API_KEY")
+			if token != "" {
+				counter, err := redisCliente.ContarRequisicoes(token, rateLimit.Tempo)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					log.Println(err)
 				} else {
-					err = redisCliente.Client.Incr(ipSemPorta).Err()
-					if err != nil {
-						w.WriteHeader(http.StatusInternalServerError)
-						log.Println(err)
+					if counter > int64(rateLimit.LimiteRequisicoesToken) {
+						w.WriteHeader(http.StatusTooManyRequests)
+						w.Write([]byte("Limite de requisições excedido"))
 						return
+					} else {
+						err = redisCliente.Client.Incr(token).Err()
+						if err != nil {
+							w.WriteHeader(http.StatusInternalServerError)
+							log.Println(err)
+							next.ServeHTTP(w, r)
+						}
 					}
 				}
-				next.ServeHTTP(w, r)
+			} else {
+
+				ip := r.RemoteAddr
+				ipSemPorta, _, _ := net.SplitHostPort(ip)
+
+				//rateLimit := RateLimit{LimiteRequisicoes: 10, Tempo: time.Second * 30}
+
+				counter, err := redisCliente.ContarRequisicoes(ipSemPorta, rateLimit.Tempo)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					log.Println(err)
+				} else {
+					if counter > int64(rateLimit.LimiteRequisicoesIP) {
+						w.WriteHeader(http.StatusTooManyRequests)
+						w.Write([]byte("Limite de requisições excedido"))
+						return
+					} else {
+						err = redisCliente.Client.Incr(ipSemPorta).Err()
+						if err != nil {
+							w.WriteHeader(http.StatusInternalServerError)
+							log.Println(err)
+							return
+						}
+					}
+					next.ServeHTTP(w, r)
+				}
 			}
 		})
 	}

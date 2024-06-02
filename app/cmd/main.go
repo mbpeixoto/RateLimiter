@@ -33,6 +33,6 @@ func main() {
 
 	r := mux.NewRouter()
 	r.Use(handlers.RateLimiRequesttMiddleware(rateLimit))
-	r.HandleFunc("/teste", handlers.HomeServer).Methods("GET")
+	r.HandleFunc("/ratelimit", handlers.HomeServer).Methods("GET")
 	http.ListenAndServe(":8080", r)
 }
