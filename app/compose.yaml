@@ -4,12 +4,19 @@ services:
     build: .
     ports:
       - 8080:8080
+    depends_on:
+      - redis
     environment:
-      - LIMITE_REQUISICOES_TOKEN=100
-      - LIMITE_REQUISICOES_IP=10
-      - TEMPO=1
+      - ENV=production # Adicione variáveis de ambiente conforme necessário
   redis:
     image: redis:latest
     container_name: rate-limiter-redis
     ports:
       - 6379:6379
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      - .:/app
+    working_dir: /app

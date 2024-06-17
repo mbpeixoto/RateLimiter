@@ -1,16 +1,15 @@
-# Dockerfile
-FROM golang:1.22.2 as build
+# Estágio de construção
+FROM golang:1.22.2 AS build
 WORKDIR /app
 COPY . .
 WORKDIR /app/cmd
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ratelimiter
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main
 
+# Estágio final
 FROM scratch
 WORKDIR /app
-COPY --from=build /app/cmd/ratelimiter .
+COPY --from=build /app/cmd/main .
+COPY --from=build /app/cmd/.env .
 
-ENV LIMITE_REQUISICOES_TOKEN=10
-ENV LIMITE_REQUISICOES_IP=10
-ENV TEMPO=30
+ENTRYPOINT ["./main"]
 
-ENTRYPOINT [ "./ratelimiter" ]

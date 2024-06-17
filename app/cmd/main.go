@@ -1,38 +1,27 @@
 package main
 
 import (
-	"log"
 	"net/http"
-	"os"
-	"ratelimiter/handlers"
-	"strconv"
-	"time"
 
+	configs "ratelimiter/config"
+	"ratelimiter/handlers"
+	redisdb "ratelimiter/redis"
+	
 	"github.com/gorilla/mux"
 )
 
 func main() {
 
-	limiteRequisicoesToken, err := strconv.Atoi(os.Getenv("LIMITE_REQUISICOES_TOKEN"))
-    if err != nil {
-        log.Println("Erro ao converter LIMITE_REQUISICOES_IP")
-    }
-
-	limiteRequisicoesIp, err := strconv.Atoi(os.Getenv("LIMITE_REQUISICOES_IP"))
+	rateLimitConfigs, err := configs.LoadConfig(".")
 	if err != nil {
-		log.Println("Erro ao converter LIMITE_REQUISICOES_IP")
+		panic(err)
 	}
 
-    tempo, err := strconv.Atoi(os.Getenv("TEMPO"))
-    if err != nil {
-        log.Println("Erro ao converter TEMPO")
-    }
-
-    rateLimit := handlers.RateLimit{LimiteRequisicoesToken: limiteRequisicoesToken, LimiteRequisicoesIP: limiteRequisicoesIp,Tempo: time.Second * time.Duration(tempo)}
+	redisRateLimiter := &redisdb.RedisRateLimiter{}
 
 
 	r := mux.NewRouter()
-	r.Use(handlers.RateLimiRequesttMiddleware(rateLimit))
+	r.Use(handlers.RateLimitMiddleware(redisRateLimiter, *rateLimitConfigs))
 	r.HandleFunc("/ratelimit", handlers.HomeServer).Methods("GET")
 	http.ListenAndServe(":8080", r)
 }
